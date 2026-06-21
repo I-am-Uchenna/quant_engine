@@ -16,21 +16,21 @@ This repository implements an end-to-end short-rate derivatives platform centere
 
 ```text
 .
-├── .github/workflows/build.yml       # Cross-platform wheel build and invariant test pipeline
-├── .streamlit/                       # Streamlit Cloud configuration and secret template
-├── cpp_core/
-│   ├── include/                      # Typed C++ public interfaces
-│   └── src/                          # C++17 implementation and pybind11 bindings
-├── python_layer/
-│   ├── data_io.py                    # FRED API + DuckDB market-data ingestion
-│   ├── ray_orchestrator.py           # Stateless distributed pricing orchestration
-│   ├── grpc_service.py               # Async gRPC pricing service
-│   └── xlwings_udf.py                # Excel UDF integration
-├── tests/test_invariants.py          # Mathematical verification suite
-├── app.py                            # Streamlit dashboard
-├── CMakeLists.txt                    # Native build definition
-├── pyproject.toml                    # PEP 517 wheel build configuration
-└── requirements.txt                  # Runtime, dashboard, and CI dependencies
+|-- .github/workflows/build.yml       # Cross-platform wheel build and invariant test pipeline
+|-- .streamlit/                       # Streamlit Cloud configuration and secret template
+|-- cpp_core/
+|   |-- include/                      # Typed C++ public interfaces
+|   `-- src/                          # C++17 implementation and pybind11 bindings
+|-- python_layer/
+|   |-- data_io.py                    # FRED API + DuckDB market-data ingestion
+|   |-- ray_orchestrator.py           # Stateless distributed pricing orchestration
+|   |-- grpc_service.py               # Async gRPC pricing service
+|   `-- xlwings_udf.py                # Excel UDF integration
+|-- tests/test_invariants.py          # Mathematical verification suite
+|-- app.py                            # Streamlit dashboard
+|-- CMakeLists.txt                    # Native build definition
+|-- pyproject.toml                    # PEP 517 wheel build configuration
+`-- requirements.txt                  # Runtime, dashboard, and CI dependencies
 ```
 
 ## Quantitative Model
