@@ -1,36 +1,29 @@
 # Quant Engine — Hull-White Bermudan Swaption Pricer
 
-An end-to-end Bermudan swaption pricing framework built on the one-factor
-Hull-White short-rate model. It pairs a C++17 numerical core with a Python
-infrastructure layer for market data, distributed execution, service delivery,
-Excel access, and an interactive Streamlit dashboard.
+Prices Bermudan swaptions under the one-factor Hull-White short-rate model. A
+C++17 numerical core does the heavy lifting; a Python layer handles market data,
+distribution, delivery, Excel access, and an interactive Streamlit dashboard.
 
-The pricer ships with **two interchangeable backends**:
+Two interchangeable backends ship with it: a compiled C++17 core (via pybind11)
+for speed, and a pure-Python reference engine with the same model mathematics.
+The dashboard uses the C++ core when it is available and the Python engine
+otherwise, so it runs anywhere — including free hosts that do not compile native
+code — with no extra setup.
 
-- a compiled **C++17 core** (via pybind11) for production-grade speed, and
-- a pure-**Python reference engine** with identical model mathematics.
+## What's inside
 
-The dashboard automatically uses the C++ core when it has been built and
-falls back to the Python engine otherwise. This means the app runs anywhere —
-including free hosts such as Streamlit Community Cloud, where native code is not
-compiled — without any extra setup.
-
-## Highlights
-
-- **C++17 analytics core** — exact Hull-White simulation, Sobol quasi-Monte
-  Carlo, Brownian-bridge construction, and Longstaff-Schwartz regression.
+- **C++17 core** — exact Hull-White simulation, Sobol quasi-Monte Carlo,
+  Brownian-bridge construction, Longstaff-Schwartz regression.
 - **Python reference engine** — the same model in NumPy/SciPy, used as an
-  automatic fallback so pricing never depends on a compiler being present.
-- **Python infrastructure** — FRED market-data ingestion, Ray distribution,
-  an async gRPC service, and an Excel UDF.
-- **Mathematical invariant tests** — martingale consistency, Jamshidian
-  convergence, and Bermudan exercise monotonicity.
-- **Streamlit dashboard** — live pricing, quantitative reporting, and simulated
-  short-rate path visualization.
-- **GitHub Actions CI** — cibuildwheel builds and tests wheels on Linux,
-  Windows, and macOS.
+  automatic fallback.
+- **Python infrastructure** — FRED market-data ingestion, Ray distribution, an
+  async gRPC service, and an Excel UDF.
+- **Invariant tests** — martingale consistency, Jamshidian convergence,
+  exercise monotonicity.
+- **Streamlit dashboard** — live pricing, reporting, and short-rate path plots.
+- **CI** — cibuildwheel builds and tests wheels on Linux, Windows, and macOS.
 
-## Repository Layout
+## Layout
 
 ```text
 .
@@ -53,7 +46,7 @@ compiled — without any extra setup.
 `-- requirements-dev.txt              # Full-stack build, distributed, and test dependencies
 ```
 
-## Quantitative Model
+## Model
 
 The short rate follows the Hull-White one-factor risk-neutral process:
 
@@ -64,58 +57,50 @@ dr_t = (\theta(t) - a\,r_t)\,dt + \sigma\,dW_t
 The simulator uses the exact Gaussian transition density:
 
 ```math
-\mathbb{E}[r_t \mid \mathcal{F}_s]
-= r_s e^{-a(t-s)} + \alpha(t) - \alpha(s)e^{-a(t-s)}
+\mathbb{E}[r_t \mid \mathcal{F}_s] = r_s e^{-a(t-s)} + \alpha(t) - \alpha(s)e^{-a(t-s)}
 ```
 
 ```math
-\operatorname{Var}(r_t \mid \mathcal{F}_s)
-= \frac{\sigma^2}{2a}\left(1 - e^{-2a(t-s)}\right)
+\mathrm{Var}(r_t \mid \mathcal{F}_s) = \frac{\sigma^2}{2a}\left(1 - e^{-2a(t-s)}\right)
 ```
 
-Early exercise is solved by Longstaff-Schwartz backward induction using
-weighted Laguerre basis functions and a ridge-regularized normal-equations
-solve. Both backends implement the same curve construction (natural cubic
-spline), discount-bond reconstruction, and Jamshidian European reduction.
+Early exercise uses Longstaff-Schwartz backward induction with weighted Laguerre
+basis functions and a ridge-regularized normal-equations solve. Both backends
+share the same cubic-spline curve, discount-bond reconstruction, and Jamshidian
+European reduction.
 
-### Pricing Backends
+### Backends
 
-| Backend | Module | Speed | Requires a compiler |
+| Backend | Module | Speed | Needs a compiler |
 | --- | --- | --- | --- |
 | C++17 core | `quant_engine_cpp` (built from `cpp_core/`) | Fast | Yes |
 | Python reference | `python_layer/python_engine.py` | Slower | No |
 
-`python_layer.data_io.load_cpp_engine()` resolves the backend in this order:
-an installed `quant_engine_cpp` extension, a `quant_engine_cpp` found in a local
-`build*` directory, and finally the Python reference engine. The dashboard
-displays which backend is active. Quasi-Monte Carlo draws in the Python engine
-come from `scipy.stats.qmc.Sobol`, so its prices match the C++ core in
-expectation (within Monte Carlo error) rather than draw-for-draw.
+`load_cpp_engine()` resolves the backend in order: an installed
+`quant_engine_cpp` extension, a `quant_engine_cpp` in a local `build*` directory,
+then the Python reference engine. The dashboard shows which one is active. The
+Python engine draws QMC points from `scipy.stats.qmc.Sobol`, so its prices match
+the C++ core in expectation (within Monte Carlo error) rather than draw-for-draw.
 
-## Market Data
+## Market data
 
-Live pricing uses the published US rates curve from FRED and requires a free
-FRED API key. The loader reads:
+Live pricing uses the published US rates curve from FRED and needs a free FRED
+API key. The loader reads FRBNY SOFR and SOFR averages, Federal Reserve H.15
+Treasury constant-maturity rates, and curve-implied forward-start par swap rates
+derived from the downloaded curve.
 
-- FRBNY SOFR and SOFR averages,
-- Federal Reserve H.15 Treasury constant-maturity rates, and
-- curve-implied forward-start par swap rates derived from the downloaded curve.
-
-Create a local `.env` file (it is git-ignored):
+Create a local `.env` file (git-ignored):
 
 ```bash
 FRED_API_KEY=your_fred_api_key
 ```
 
-Use only the 32-character key value — not the FRED account URL, a Markdown
-link, the `FRED_API_KEY=` prefix, or any placeholder text. For Streamlit Cloud,
-add the same value under **App settings → Secrets** as `FRED_API_KEY`. If no key
-is configured, the dashboard prompts for one on first load and stores it in the
-local `.env` file.
+Use the bare 32-character key value — not the account URL, a Markdown link, the
+`FRED_API_KEY=` prefix, or placeholder text. For Streamlit Cloud, add the same
+value under **App settings → Secrets**. If no key is set, the dashboard prompts
+for one on first load and stores it in the local `.env`.
 
-## Local Setup
-
-Create and activate a virtual environment:
+## Local setup
 
 ```bash
 python -m venv .venv
@@ -126,16 +111,14 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 ```
 
-For the dashboard only:
+Run the dashboard against the Python engine (no build step):
 
 ```bash
 python -m pip install -r requirements.txt
 streamlit run app.py
 ```
 
-This runs against the Python reference engine — no build step required.
-
-### Optional: build the C++ core for maximum speed
+Build the C++ core for full speed:
 
 ```bash
 python -m pip install -r requirements-dev.txt
@@ -146,48 +129,48 @@ python -m pip install dist/*.whl
 Once `quant_engine_cpp` is importable, the dashboard and the distributed and
 gRPC paths use it automatically.
 
-Run the mathematical verification suite (requires the compiled core):
+Run the verification suite (requires the compiled core):
 
 ```bash
 pytest tests/test_invariants.py -q
 ```
 
-## Streamlit Cloud Deployment
+## Streamlit Cloud
 
-1. Push this repository to GitHub.
-2. Open [Streamlit Community Cloud](https://share.streamlit.io/).
-3. Select **New app** and choose this repository and branch `main`.
-4. Set the app entrypoint to `app.py`.
-5. Add `FRED_API_KEY` under **App settings → Secrets**:
+1. Push the repository to GitHub.
+2. In [Streamlit Community Cloud](https://share.streamlit.io/), select **New
+   app** and choose this repository and branch `main`.
+3. Set the entrypoint to `app.py`.
+4. Add the key under **App settings → Secrets**:
 
    ```toml
    FRED_API_KEY = "your_fred_api_key"
    ```
 
-6. Deploy.
+5. Deploy.
 
-Streamlit Cloud installs `requirements.txt` and launches the dashboard against
-the Python reference engine. It does **not** compile the C++ core; the native
-extension is for local and CI builds where a compiler is available.
+Streamlit installs `requirements.txt` and starts the dashboard. The app uses
+whichever backend is present — the compiled core if the platform builds it,
+otherwise the Python reference engine — and shows which one is active.
 
-## CI/CD
+## CI
 
 GitHub Actions builds wheels with `pypa/cibuildwheel` for Ubuntu, Windows, and
-macOS on Python 3.10, 3.11, and 3.12. Each wheel is tested against
-`tests/test_invariants.py` before artifact upload, and tagged releases publish
-the verified wheels to GitHub Releases.
+macOS on Python 3.10–3.12. Each wheel is tested against
+`tests/test_invariants.py` before upload, and tagged releases publish the
+verified wheels to GitHub Releases.
 
-## Validation Standard
+## Validation
 
-The invariant suite is model-facing rather than superficial:
+The invariant suite checks the model, not just the plumbing:
 
 - **Martingale property** — discounted zero-coupon bond prices are unbiased
   under the risk-neutral simulation.
 - **Jamshidian convergence** — single-exercise Bermudan valuation matches the
   analytical European swaption reduction.
-- **Exercise monotonicity** — Bermudan value does not decrease as exercise
+- **Exercise monotonicity** — Bermudan value does not fall as exercise
   opportunities increase.
 
-The Python reference engine satisfies the same three invariants, with the
-single-exercise LSMC price reproducing the Jamshidian value to machine
-precision in the deterministic (`sigma = 0`) case.
+The Python reference engine passes the same three checks; in the deterministic
+(`sigma = 0`) case its single-exercise LSMC price reproduces the Jamshidian value
+to machine precision.
