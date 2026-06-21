@@ -1,4 +1,4 @@
-# Quant Engine — Hull-White Bermudan Swaption Pricer
+# Quant Engine: Hull-White Bermudan Swaption Pricer
 
 Prices Bermudan swaptions under the one-factor Hull-White short-rate model. A
 C++17 numerical core does the heavy lifting; a Python layer handles market data,
@@ -7,21 +7,21 @@ distribution, delivery, Excel access, and an interactive Streamlit dashboard.
 Two interchangeable backends ship with it: a compiled C++17 core (via pybind11)
 for speed, and a pure-Python reference engine with the same model mathematics.
 The dashboard uses the C++ core when it is available and the Python engine
-otherwise, so it runs anywhere — including free hosts that do not compile native
-code — with no extra setup.
+otherwise, so it runs anywhere, including free hosts that do not compile native
+code, with no extra setup.
 
 ## What's inside
 
-- **C++17 core** — exact Hull-White simulation, Sobol quasi-Monte Carlo,
+- **C++17 core**: exact Hull-White simulation, Sobol quasi-Monte Carlo,
   Brownian-bridge construction, Longstaff-Schwartz regression.
-- **Python reference engine** — the same model in NumPy/SciPy, used as an
+- **Python reference engine**: the same model in NumPy/SciPy, used as an
   automatic fallback.
-- **Python infrastructure** — FRED market-data ingestion, Ray distribution, an
+- **Python infrastructure**: FRED market-data ingestion, Ray distribution, an
   async gRPC service, and an Excel UDF.
-- **Invariant tests** — martingale consistency, Jamshidian convergence,
+- **Invariant tests**: martingale consistency, Jamshidian convergence,
   exercise monotonicity.
-- **Streamlit dashboard** — live pricing, reporting, and short-rate path plots.
-- **CI** — cibuildwheel builds and tests wheels on Linux, Windows, and macOS.
+- **Streamlit dashboard**: live pricing, reporting, and short-rate path plots.
+- **CI**: cibuildwheel builds and tests wheels on Linux, Windows, and macOS.
 
 ## Layout
 
@@ -95,9 +95,9 @@ Create a local `.env` file (git-ignored):
 FRED_API_KEY=your_fred_api_key
 ```
 
-Use the bare 32-character key value — not the account URL, a Markdown link, the
+Use the bare 32-character key value, not the account URL, a Markdown link, the
 `FRED_API_KEY=` prefix, or placeholder text. For Streamlit Cloud, add the same
-value under **App settings → Secrets**. If no key is set, the dashboard prompts
+value under **App settings > Secrets**. If no key is set, the dashboard prompts
 for one on first load and stores it in the local `.env`.
 
 ## Local setup
@@ -141,7 +141,7 @@ pytest tests/test_invariants.py -q
 2. In [Streamlit Community Cloud](https://share.streamlit.io/), select **New
    app** and choose this repository and branch `main`.
 3. Set the entrypoint to `app.py`.
-4. Add the key under **App settings → Secrets**:
+4. Add the key under **App settings > Secrets**:
 
    ```toml
    FRED_API_KEY = "your_fred_api_key"
@@ -150,13 +150,13 @@ pytest tests/test_invariants.py -q
 5. Deploy.
 
 Streamlit installs `requirements.txt` and starts the dashboard. The app uses
-whichever backend is present — the compiled core if the platform builds it,
-otherwise the Python reference engine — and shows which one is active.
+whichever backend is present (the compiled core if the platform builds it,
+otherwise the Python reference engine) and shows which one is active.
 
 ## CI
 
 GitHub Actions builds wheels with `pypa/cibuildwheel` for Ubuntu, Windows, and
-macOS on Python 3.10–3.12. Each wheel is tested against
+macOS on Python 3.10, 3.11, and 3.12. Each wheel is tested against
 `tests/test_invariants.py` before upload, and tagged releases publish the
 verified wheels to GitHub Releases.
 
@@ -164,11 +164,11 @@ verified wheels to GitHub Releases.
 
 The invariant suite checks the model, not just the plumbing:
 
-- **Martingale property** — discounted zero-coupon bond prices are unbiased
-  under the risk-neutral simulation.
-- **Jamshidian convergence** — single-exercise Bermudan valuation matches the
+- **Martingale property**: discounted zero-coupon bond prices are unbiased under
+  the risk-neutral simulation.
+- **Jamshidian convergence**: single-exercise Bermudan valuation matches the
   analytical European swaption reduction.
-- **Exercise monotonicity** — Bermudan value does not fall as exercise
+- **Exercise monotonicity**: Bermudan value does not fall as exercise
   opportunities increase.
 
 The Python reference engine passes the same three checks; in the deterministic
