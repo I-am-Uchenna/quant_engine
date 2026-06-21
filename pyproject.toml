@@ -1,0 +1,40 @@
+[build-system]
+requires = [
+  "scikit-build-core>=0.11",
+  "pybind11>=2.12",
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "quant-engine"
+version = "0.1.0"
+description = "Hull-White Bermudan swaption pricing engine with pybind11 bindings"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.26",
+  "duckdb>=1.0",
+]
+
+[tool.scikit-build]
+cmake.version = ">=3.22"
+ninja.version = ">=1.10"
+wheel.packages = ["quant_engine"]
+cmake.define.QUANT_ENGINE_BUILD_PYTHON = "ON"
+cmake.define.QUANT_ENGINE_REQUIRE_COMPLETE_SOURCES = "ON"
+
+[tool.cibuildwheel]
+build = "cp310-* cp311-* cp312-*"
+test-requires = [
+  "pytest>=8.0",
+  "numpy>=1.26",
+]
+test-command = "pytest {project}/tests/test_invariants.py"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
