@@ -14,7 +14,7 @@ if str(ROOT.parent) not in sys.path:
     sys.path.insert(0, str(ROOT.parent))
 
 from quant_engine.python_layer.data_io import MarketDataManager, load_cpp_engine
-from quant_engine.python_layer.ray_orchestrator import (
+from quant_engine.python_layer.python_engine import (
     build_exercise_schedule,
     build_payment_schedule,
 )
@@ -223,6 +223,15 @@ def main() -> None:
     c2.metric("Curve nodes", f"{len(curve_times)}")
     c3.metric("2Y x 5Y curve-implied par rate", _format_rate(float(par_rate)))
     st.caption(source)
+
+    engine_is_reference = getattr(_cpp_engine(), "IS_REFERENCE_ENGINE", False)
+    if engine_is_reference:
+        st.caption(
+            "Pricing backend: pure-Python reference engine "
+            "(compiled C++ core not detected on this host)."
+        )
+    else:
+        st.caption("Pricing backend: compiled C++ core.")
 
     with st.expander("Quantitative formulation", expanded=False):
         st.latex(
