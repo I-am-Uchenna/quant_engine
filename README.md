@@ -75,6 +75,10 @@ For Streamlit Cloud, configure the same value under **App settings -> Secrets**:
 FRED_API_KEY = "your_fred_api_key"
 ```
 
+Use only the 32-character key value. Do not paste the FRED account URL,
+Markdown link syntax, `FRED_API_KEY=` shell syntax, or any placeholder text into
+the quoted value.
+
 ## Local Setup
 
 ```bash

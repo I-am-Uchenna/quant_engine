@@ -10,6 +10,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 from urllib.parse import urlencode
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 import duckdb  # type: ignore[import-untyped]
@@ -64,6 +65,11 @@ def fred_api_key() -> str:
     if not key:
         raise RuntimeError(
             "FRED_API_KEY is required. Put it in quant_engine/.env or set the environment variable."
+        )
+    if len(key) != 32 or not key.isalnum() or key.lower() != key:
+        raise RuntimeError(
+            "FRED_API_KEY must be the 32-character lower-case key value only. "
+            "Do not paste a FRED account URL, Markdown link, placeholder, or TOML syntax into the value."
         )
     return key
 
@@ -154,8 +160,18 @@ def _download_fred_series_from_api(series_id: str, api_key: str) -> dict[date, f
         _fred_api_url(series_id, api_key),
         headers={"User-Agent": "quant-engine/0.1"},
     )
-    with urlopen(request, timeout=30) as response:
-        payload = response.read().decode("utf-8")
+    try:
+        with urlopen(request, timeout=30) as response:
+            payload = response.read().decode("utf-8")
+    except HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        message = body
+        try:
+            parsed_error = json.loads(body)
+            message = str(parsed_error.get("error_message", body))
+        except json.JSONDecodeError:
+            pass
+        raise RuntimeError(f"FRED API rejected {series_id}: {message}") from exc
     parsed = json.loads(payload)
     observations: dict[date, float] = {}
     for row in parsed.get("observations", []):
