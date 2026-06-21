@@ -74,6 +74,20 @@ def fred_api_key() -> str:
     return key
 
 
+# Compiled extension file names differ per platform: .pyd on Windows, .so on
+# Linux, .dylib on macOS. Search for all of them so a locally built wheel is
+# discoverable regardless of host.
+_CPP_MODULE_PATTERNS = (
+    "quant_engine_cpp*.pyd",
+    "quant_engine_cpp*.so",
+    "quant_engine_cpp*.dylib",
+)
+
+
+def _has_built_module(directory: Path) -> bool:
+    return any(any(directory.glob(pattern)) for pattern in _CPP_MODULE_PATTERNS)
+
+
 def ensure_cpp_module_path(root: Path | None = None) -> Path:
     base = project_root() if root is None else root
     direct_candidates = [
@@ -82,16 +96,19 @@ def ensure_cpp_module_path(root: Path | None = None) -> Path:
         base / "build",
     ]
     for candidate in direct_candidates:
-        if any(candidate.glob("quant_engine_cpp*.pyd")):
+        if _has_built_module(candidate):
             candidate_text = str(candidate)
             if candidate_text not in sys.path:
                 sys.path.insert(0, candidate_text)
             return candidate
 
-    matches = sorted(base.glob("build*/quant_engine_cpp*.pyd"))
+    matches: list[Path] = []
+    for pattern in _CPP_MODULE_PATTERNS:
+        matches.extend(sorted(base.glob(f"build*/{pattern}")))
     if not matches:
         raise ModuleNotFoundError(
-            "quant_engine_cpp was not found. Build Phase 2 before loading Python infrastructure."
+            "quant_engine_cpp was not found. Build the native extension before "
+            "loading the compiled pricing core."
         )
     module_dir = matches[0].parent
     module_dir_text = str(module_dir)
@@ -101,10 +118,35 @@ def ensure_cpp_module_path(root: Path | None = None) -> Path:
 
 
 def load_cpp_engine() -> ModuleType:
-    ensure_cpp_module_path()
-    import quant_engine_cpp  # type: ignore[import-not-found]
+    """Return the active pricing backend.
 
-    return quant_engine_cpp
+    Preference order:
+
+    1. an installed/compiled ``quant_engine_cpp`` extension (fastest, authoritative);
+    2. a ``quant_engine_cpp`` built into a local ``build*`` directory;
+    3. the pure-Python reference engine in
+       :mod:`quant_engine.python_layer.python_engine`.
+
+    The reference engine lets the dashboard run on hosts without a compiler,
+    such as Streamlit Community Cloud, while keeping the C++ core as the fast
+    path wherever it has been built.
+    """
+    try:
+        import quant_engine_cpp  # type: ignore[import-not-found]
+
+        return quant_engine_cpp
+    except ModuleNotFoundError:
+        pass
+
+    try:
+        ensure_cpp_module_path()
+        import quant_engine_cpp  # type: ignore[import-not-found, no-redef]
+
+        return quant_engine_cpp
+    except ModuleNotFoundError:
+        from quant_engine.python_layer import python_engine
+
+        return python_engine
 
 
 def _as_float_array(values: list[float]) -> FloatArray:
