@@ -31,6 +31,43 @@ def _load_streamlit_secrets() -> None:
         os.environ["FRED_API_KEY"] = str(fred_key)
 
 
+def _valid_fred_key(value: str) -> bool:
+    key = value.strip()
+    return len(key) == 32 and key.isalnum() and key.lower() == key
+
+
+def _configure_fred_key_if_missing() -> None:
+    if os.environ.get("FRED_API_KEY"):
+        return
+
+    with st.container(border=True):
+        st.subheader("FRED Market Data Key")
+        st.write(
+            "Enter the raw 32-character FRED API key. The app stores it in the local "
+            "ignored `.env` file for this runtime and never writes it to Git."
+        )
+        key = st.text_input("FRED_API_KEY", type="password", placeholder="32 lower-case letters/numbers")
+        save = st.button("Save Key", type="primary")
+
+    if not save:
+        st.stop()
+
+    cleaned = key.strip()
+    if not _valid_fred_key(cleaned):
+        st.error("The key must be exactly 32 lower-case letters/numbers.")
+        st.stop()
+
+    env_path = ROOT / ".env"
+    env_path.write_text(f"FRED_API_KEY={cleaned}\n", encoding="utf-8")
+    try:
+        env_path.chmod(0o600)
+    except OSError:
+        pass
+    os.environ["FRED_API_KEY"] = cleaned
+    st.cache_data.clear()
+    st.rerun()
+
+
 def _format_rate(value: float) -> str:
     return f"{100.0 * value:.3f}%"
 
@@ -153,6 +190,7 @@ def main() -> None:
     _load_streamlit_secrets()
 
     st.title("Bermudan Swaption Pricing")
+    _configure_fred_key_if_missing()
 
     with st.sidebar:
         st.header("Instrument")
