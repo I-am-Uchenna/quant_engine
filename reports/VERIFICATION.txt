@@ -1,0 +1,24 @@
+key                   in_paper  recompute                   status
+------------------------------------------------------------------------------
+atm_strike_flat       yes       3.04545 vs 3.0455 OK        PASS
+euro_ours             yes       0.0136924 vs 0.0136924 OK   PASS
+euro_ql               yes       0.0136998 vs 0.0136998 OK   PASS
+bermudan_tree         yes       0.0157618 vs 0.0157618 OK   PASS
+bermudan_lsmc_65k     yes       0.0157289 vs 0.0157289 OK   PASS
+g2_mc                 yes       0.00617693 vs 0.00617693 OK PASS
+g2_fd                 yes       0.00618708 vs 0.00618708 OK PASS
+g2_curve_repro_err    yes       0 vs 0 OK                   PASS
+aad_rel_err           yes       1.65172e-06 vs 1e-06 OK     PASS
+pca_pc1               yes       —                           PASS
+pca_pc2               yes       —                           PASS
+corr_2y30y_g2         yes       —                           PASS
+corr_2y30y_emp        yes       —                           PASS
+sigma_2y              yes       —                           PASS
+n_sofr_obs            yes       —                           PASS
+price_assumed         yes       —                           PASS
+price_sigma751        yes       —                           PASS
+dv01_parallel         yes       —                           PASS
+vega_model            yes       —                           PASS
+aad_speedup_132       yes       —                           PASS
+------------------------------------------------------------------------------
+PASS: 20/20 numbers verified

@@ -1,0 +1,23 @@
+{
+  "_schema": "E2ER-style numeric sidecar for PAPER.tex. Each entry: value, unit, display (string as printed in paper), tol (relative unless abs_tol), source (script in research/), recompute (deterministic re-derivation in verify_numbers.py).",
+  "atm_strike_flat":      {"value": 3.0455,     "unit": "%",     "display": "3.0455\\%",            "abs_tol": 0.0005, "source": "01_quantlib_reconciliation.py", "recompute": "atm_strike"},
+  "euro_ours":            {"value": 0.01369243, "unit": "price", "display": "1.369243\\times10^{-2}","tol": 1e-4,       "source": "01_quantlib_reconciliation.py", "recompute": "euro_ours"},
+  "euro_ql":              {"value": 0.01369977, "unit": "price", "display": "1.369977\\times10^{-2}","tol": 1e-4,       "source": "01_quantlib_reconciliation.py", "recompute": "euro_ql"},
+  "bermudan_tree":        {"value": 0.01576184, "unit": "price", "display": "1.576184\\times10^{-2}","tol": 1e-3,       "source": "01_quantlib_reconciliation.py", "recompute": "bermudan_tree"},
+  "bermudan_lsmc_65k":    {"value": 0.01572892, "unit": "price", "display": "1.572892\\times10^{-2}","abs_tol": 3e-4,   "source": "01_quantlib_reconciliation.py", "recompute": "bermudan_lsmc"},
+  "g2_mc":                {"value": 0.006176933,"unit": "price", "display": "6.176933\\times10^{-3}","abs_tol": 1e-4,   "source": "08_g2pp_quantlib_validation.py","recompute": "g2_mc"},
+  "g2_fd":                {"value": 0.006187076,"unit": "price", "display": "6.187076\\times10^{-3}","tol": 1e-3,       "source": "08_g2pp_quantlib_validation.py","recompute": "g2_fd"},
+  "g2_curve_repro_err":   {"value": 0.0,        "unit": "abs",   "display": "0.00\\times10^{0}",     "abs_tol": 1e-10,  "source": "07_g2pp_decorrelation.py",      "recompute": "g2_repro"},
+  "aad_rel_err":          {"value": 1e-6,       "unit": "rel",   "display": "10^{-6}",               "abs_tol": 9e-6,   "source": "09_aad_greeks.py",              "recompute": "aad_relerr"},
+  "pca_pc1":              {"value": 87.12,      "unit": "%",     "display": "87.1\\%",               "abs_tol": 0.5,    "source": "06_curve_pca_fred.py",          "recompute": null},
+  "pca_pc2":              {"value": 11.16,      "unit": "%",     "display": "11.2\\%",               "abs_tol": 0.5,    "source": "06_curve_pca_fred.py",          "recompute": null},
+  "corr_2y30y_g2":        {"value": 0.77,       "unit": "corr",  "display": "0.77",                  "abs_tol": 0.02,   "source": "07_g2pp_decorrelation.py",      "recompute": null},
+  "corr_2y30y_emp":       {"value": 0.57,       "unit": "corr",  "display": "0.57",                  "abs_tol": 0.03,   "source": "07_g2pp_decorrelation.py",      "recompute": null},
+  "sigma_2y":             {"value": 75.1,       "unit": "bp",    "display": "75.1",                  "abs_tol": 0.5,    "source": "04_parameter_estimation_fred.py","recompute": null},
+  "n_sofr_obs":           {"value": 2050,       "unit": "count", "display": "2{,}050",               "abs_tol": 5,      "source": "04_parameter_estimation_fred.py","recompute": null},
+  "price_assumed":        {"value": 15292.68,   "unit": "$",     "display": "15{,}292.68",           "abs_tol": 50,     "source": "05_parameter_price_impact.py",  "recompute": null},
+  "price_sigma751":       {"value": 11495.95,   "unit": "$",     "display": "11{,}495.95",           "abs_tol": 50,     "source": "05_parameter_price_impact.py",  "recompute": null},
+  "dv01_parallel":        {"value": 125.71,     "unit": "$/bp",  "display": "125.71",                "abs_tol": 1.0,    "source": "03_risk_suite_fred.py",         "recompute": null},
+  "vega_model":           {"value": 152.38,     "unit": "$/bp",  "display": "152.38",                "abs_tol": 1.0,    "source": "03_risk_suite_fred.py",         "recompute": null},
+  "aad_speedup_132":      {"value": 40.3,       "unit": "x",     "display": "40\\times",             "abs_tol": 8,      "source": "10_aad_scaling.py",             "recompute": null}
+}

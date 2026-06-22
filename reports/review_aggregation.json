@@ -1,0 +1,11 @@
+{
+  "verdict": "MINOR_REVISION",
+  "weighted_avg": 7.52,
+  "rule_triggered": "Rule 3: weighted average (6.5-7.9 -> MINOR_REVISION)",
+  "rule_1_mechanism_below_5": false,
+  "rule_2_any_below_4": false,
+  "weights": {"technical": 1.5, "identification": 1.5, "data": 1.25, "mechanism": 1.0, "literature": 1.0, "writing": 1.0},
+  "scores": {"mechanism": 7, "technical": 8, "identification": 7, "data": 8, "literature": 7, "writing": 8},
+  "rationale": "Weighted average 7.52/10. No floor or mechanism violation. MINOR_REVISION: the minor items are the documented limitations (no implied-vol calibration; illustrative G2++ parameters; single-instrument scope).",
+  "minor_revisions": ["calibrate to a real swaption-vol surface when available", "validate across a strike/tenor grid", "formalise the AAD envelope-theorem argument"]
+}

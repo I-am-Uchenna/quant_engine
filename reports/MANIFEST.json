@@ -1,0 +1,59 @@
+{
+  "title": "A Validated Monte Carlo Engine for Bermudan Swaptions",
+  "author": "Uchenna Ejike",
+  "artifacts": {
+    "validation_report": {
+      "pdf": "VALIDATION.pdf",
+      "tex": "VALIDATION.tex",
+      "md": "VALIDATION.md"
+    },
+    "figures": {
+      "fig1_convergence.png": "research/01_quantlib_reconciliation.py",
+      "fig2_pca.png": "research/06_curve_pca_fred.py",
+      "fig3_decorrelation.png": "research/07_g2pp_decorrelation.py",
+      "fig4_exposure.png": "research/03_risk_suite_fred.py",
+      "fig5_aad_scaling.png": "research/10_aad_scaling.py"
+    },
+    "white_paper": {
+      "pdf": "WHITEPAPER.pdf",
+      "tex": "WHITEPAPER.tex",
+      "role": "primary, practitioner-facing"
+    },
+    "technical_paper": {
+      "pdf": "PAPER.pdf",
+      "tex": "PAPER.tex",
+      "pages": 7,
+      "role": "academic-framed alternate"
+    }
+  },
+  "verification": {
+    "sidecar": "numbers.json",
+    "gate": "verify_numbers.py",
+    "log": "VERIFICATION.txt",
+    "numbers_tracked": 20,
+    "numbers_passed": 20,
+    "deterministic_rederived": 9,
+    "status": "PASS"
+  },
+  "adversarial": {
+    "self_attack": "SELF_ATTACK.md",
+    "max_unresolved_severity": 7,
+    "unresolved_severity_ge_8": 0
+  },
+  "review": {
+    "file": "REVIEW.md",
+    "aggregation": "review_aggregation.json",
+    "verdict": "MINOR_REVISION",
+    "weighted_avg": 7.52
+  },
+  "data_sources": {
+    "FRED": [
+      "SOFR",
+      "SOFR30/90/180DAYAVG",
+      "DGS1..DGS30"
+    ],
+    "benchmark": "QuantLib 1.42.1",
+    "autodiff": "autograd"
+  },
+  "reproduce": "Set FRED_API_KEY; run research/*.py from repo root; then `python reports/verify_numbers.py` (needs reports/PAPER.tex alongside)."
+}
