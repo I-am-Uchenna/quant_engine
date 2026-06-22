@@ -1,0 +1,332 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+\usepackage{enumitem}
+
+\title{\textbf{Model Validation Report:\\ Hull--White / G2++ Bermudan Swaption Engine}}
+\author{Uchenna Ejike}
+\date{June 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent This report validates a Monte Carlo Bermudan swaption engine built on the
+one-factor Hull--White and two-factor G2++ Gaussian short-rate models. Validation
+follows three independent axes: (i) cross-validation of prices against the QuantLib
+library (v1.42.1) using matched conventions; (ii) self-consistent numerical evidence
+(Monte Carlo convergence and an Andersen--Broadie primal--dual policy bound); and
+(iii) grounding of all model inputs in real, reproducible market data from the Federal
+Reserve Economic Database (FRED). Every figure quoted below is the output of a script
+in \texttt{research/}, runnable against public data. Limitations are stated explicitly,
+including those that cannot be closed without a licensed swaption-volatility surface.
+Software versions: QuantLib 1.42.1, NumPy 2.2.6, SciPy 1.15.3.
+\end{abstract}
+
+\section{Models}
+
+The one-factor Hull--White short rate follows the risk-neutral process
+\[
+  dr_t = \big(\theta(t) - a\,r_t\big)\,dt + \sigma\,dW_t,
+\]
+with $\theta(t)$ chosen so the model reproduces the initial discount curve exactly. The
+two-factor extension (G2++, Brigo--Mercurio) writes $r_t = x_t + y_t + \varphi(t)$ with
+\[
+  dx_t = -a\,x_t\,dt + \sigma\,dW_t^{(1)}, \qquad
+  dy_t = -b\,y_t\,dt + \eta\,dW_t^{(2)}, \qquad
+  dW_t^{(1)}\,dW_t^{(2)} = \rho\,dt,
+\]
+and a deterministic shift $\varphi(t)$ fitting the curve. Both are Gaussian, hence
+consistent with the market's post-2014 convention of quoting swaption volatility as
+normal (basis-point) vol, and both admit negative rates by construction.
+
+\section{Numerical method}
+
+Early exercise is solved by Longstaff--Schwartz least-squares Monte Carlo: forward
+simulation of the short rate, then backward induction estimating the continuation value
+by regression on a weighted-Laguerre basis with a ridge-regularised normal-equations
+solve. Quasi-Monte Carlo draws come from a scrambled Sobol sequence mapped through the
+inverse normal CDF. Discounting uses the simulated money-market account.
+
+\section{Validation results}
+
+\subsection{European reconciliation (isolates conventions)}
+
+On a flat 3\% curve with $a = 0.05$, $\sigma = 0.01$, a 2Y-into-3Y European payer swaption:
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Quantity & Engine & QuantLib & Difference \\
+\midrule
+ATM forward rate & 3.0455\% & 3.0455\% & exact \\
+Jamshidian European price & $1.369243\times10^{-2}$ & $1.369977\times10^{-2}$ & \textbf{0.07 bp} of notional \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The 0.07 bp residual is the day-count difference (integer-year times vs
+ACT/365). Conventions are reconciled.
+
+\subsection{Bermudan vs QuantLib tree, and Monte Carlo convergence}
+
+Same instrument and model, three exercise dates. QuantLib trinomial tree (200 steps)
+$= 1.576184\times10^{-2}$.
+
+\begin{center}
+\begin{tabular}{rccc}
+\toprule
+QMC paths & LSMC price & 95\% CI half-width & vs tree \\
+\midrule
+1{,}024  & $1.573579\times10^{-2}$ & 11.6 bp & $-0.26$ bp \\
+4{,}096  & $1.574304\times10^{-2}$ & 5.8 bp  & $-0.19$ bp \\
+16{,}384 & $1.573035\times10^{-2}$ & 2.9 bp  & $-0.31$ bp \\
+65{,}536 & $1.572892\times10^{-2}$ & 1.45 bp & $-0.33$ bp \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Two independent methods (Monte Carlo LSMC vs trinomial tree) agree to within
+Monte Carlo error. The confidence interval scales as $1/\sqrt{N}$: $64\times$ the paths
+gives exactly $8\times$ tighter CI. The LSMC sits a few tenths of a bp below the tree,
+the sign of the known Longstaff--Schwartz low bias.
+
+\subsection{Policy optimality: Andersen--Broadie primal--dual bound}
+
+The dual upper bound built from the policy's own 4-term basis gave a gap of $\sim$8.3 bp
+that did \emph{not} shrink with more inner simulations (8.3 bp at 200 inner paths, 8.3 bp
+at 5{,}000), proving the gap is value-surface approximation error, not Monte Carlo noise.
+Replacing the value surface with a degree-5 regression collapsed the gap to $\sim$0.04 bp.
+The duality gap is therefore statistically consistent with zero (well inside the
+lower-bound CI), which \textbf{proves the LSMC exercise policy is near-optimal} --- a
+stronger statement than the single-exercise Jamshidian check, which validates only the
+terminal boundary condition.
+
+\subsection{Two-factor (G2++) validation}
+
+\paragraph{Empirical motivation.} Principal component analysis of daily changes in the US
+Treasury curve (FRED \texttt{DGS2, DGS5, DGS10, DGS30}, 1{,}365 trading days, 2021-01-04
+to 2026-06-17):
+
+\begin{center}
+\begin{tabular}{cccl}
+\toprule
+PC & Variance & Cumulative & Interpretation \\
+\midrule
+1 & 87.12\% & 87.12\% & level (loadings 0.51, 0.56, 0.51, 0.40) \\
+2 & 11.16\% & 98.28\% & slope (0.67, 0.15, $-0.32$, $-0.66$) \\
+3 & 1.39\%  & 99.67\% & curvature \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent A one-factor model captures only the level factor and \emph{forces all rates to
+be perfectly correlated}, discarding the 11\% slope factor.
+
+\paragraph{Implementation.} The G2++ bond reconstruction reproduces the initial curve to
+machine precision ($P(0,T;0,0)$ vs market: error $0.00\times10^{0}$).
+
+\paragraph{Decorrelation.} Terminal correlation of zero rates at a 1-year horizon (G2++
+params $a=0.5,\ b=0.05,\ \sigma=80$ bp, $\eta=60$ bp, $\rho=-0.7$):
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+$\mathrm{corr}(\text{2Y}, \text{30Y})$ & Value \\
+\midrule
+One-factor Hull--White & 1.00 (structural) \\
+G2++ & 0.77 \\
+Empirical (real FRED) & 0.57 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent One-factor is forced to 1.00, contradicted by the data (0.57). G2++ reproduces
+the correct decorrelation shape; the illustrative parameters under-decorrelate versus
+reality, which calibration would close.
+
+\paragraph{Pricing cross-validation.} A 2Y-into-3Y G2++ European payer swaption:
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+Method & Price \\
+\midrule
+Engine Monte Carlo & $6.176933\times10^{-3}$ ($\pm$ 0.39 bp) \\
+QuantLib FdG2 engine & $6.187076\times10^{-3}$ \\
+Difference & \textbf{0.10 bp} (within MC error) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The two-factor engine is validated end-to-end against an independent
+finite-difference implementation.
+
+\subsection{Risk sensitivities by algorithmic differentiation (AAD)}
+
+Greeks are computed by reverse-mode automatic differentiation of a policy-fixed pricer:
+holding the exercise policy fixed (justified to first order by the envelope theorem), the
+price is a smooth function of the curve nodes and $\sigma$, and a single reverse pass
+returns the entire gradient (all key-rate deltas and vega). Against bump-and-revalue on
+the same pricer the agreement is to $\sim 10^{-6}$ (vega \$150.32/bp by both methods; 2Y
+key-rate DV01 $-\$68.78$ by both; 5Y $+\$239.97$ by both).
+
+The cost advantage follows the cheap-gradient principle: one reverse pass costs a constant
+$\sim 3.3\times$ a single valuation \emph{independent of the number of inputs}, while
+bump-and-revalue scales linearly.
+
+\begin{center}
+\begin{tabular}{rcccc}
+\toprule
+Risk factors & 1 valuation & AAD reverse & Bump-all & AAD speedup \\
+\midrule
+14  & 5.3 ms & 20.9 ms & 73 ms  & $3.5\times$ \\
+42  & 5.3 ms & 16.6 ms & 225 ms & $13.6\times$ \\
+72  & 5.4 ms & 18.0 ms & 377 ms & $21.0\times$ \\
+132 & 5.3 ms & 17.7 ms & 715 ms & $40.3\times$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The speedup grows with the size of the risk ladder; a realistic book (key-rate
+buckets plus a vega ladder) exceeds 100 factors.
+
+\section{Real-market parameterisation}
+
+\subsection{Data sources (reproducible)}
+
+All market data is public and reproducible from FRED: overnight \texttt{SOFR} and
+\texttt{SOFR30/90/180DAYAVG}; H.15 Treasury constant-maturity yields \texttt{DGS1}\,\ldots\,\texttt{DGS30}.
+The discount curve used for pricing is dated \textbf{2026-06-17} (13 nodes, overnight
+3.63\% to 30Y 4.93\%). Curve-implied par swap rates are bootstrapped from this curve and
+labelled as model-implied, not market mid quotes (FRED discontinued its swap-rate series).
+
+\subsection{Volatility estimated from history, not assumed}
+
+Fitting the short-rate process to the full daily \texttt{SOFR} series (2{,}050 observations,
+2018-04-03 to 2026-06-17):
+
+\begin{center}
+\begin{tabular}{ccl}
+\toprule
+$\sigma$ (bp/yr) & Window & Note \\
+\midrule
+169.4 & full history & contaminated by the Sept-2019 repo spike (SOFR 5.40\%) and 2022--23 hikes \\
+75.1  & last $\sim$2y & trustworthy estimate ($\pm$ 2.4 bp, 95\%) \\
+72.6  & last $\sim$1y & regime-dependent \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The realized-vol and Ornstein--Uhlenbeck-MLE estimates of $\sigma$ agree to
+0.1 bp, an internal validation of the estimation. Mean reversion $a$ is \emph{not}
+reliably identifiable from a non-stationary level series (OU MLE: $0.37 \pm 0.31$),
+consistent with $a$ being a calibration parameter in practice.
+
+\paragraph{Price impact.} Repricing the 2026-06-17 Bermudan on the real curve:
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+$\sigma$ source & Bermudan price \\
+\midrule
+assumed 100 bp & \$15{,}292.68 \\
+realized $\sim$2y, 75.1 bp & \textbf{\$11{,}495.95} \\
+realized $\sim$1y, 72.6 bp & \$11{,}115.16 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Moving from an assumed to a sourced $\sigma$ changed the price by $\sim$25\%,
+demonstrating that the parameter was material, not cosmetic. \textbf{Caveat (measure):}
+diffusion volatility is measure-invariant, so realized vol is a legitimate estimate of the
+true $\sigma$; however, market swaption prices embed \emph{implied} vol, which exceeds
+realized by a variance risk premium, so the realized-vol price is a physical/historical
+anchor below the market-consistent price. Only an implied-vol calibration closes that gap.
+
+\section{Risk analytics (real curve, 2026-06-17)}
+
+2Y-into-3Y ATM payer Bermudan, \$1{,}000{,}000 notional, computed with common random
+numbers for stability.
+
+\begin{itemize}[nosep]
+  \item \textbf{Parallel DV01:} \$125.71 / bp.
+  \item \textbf{Key-rate DV01:} $+\$240.73$ at 5Y, $-\$56.10$ at 2Y, $-\$57.52$ at 3Y,
+        negligible beyond. Long the back, short the front, as expected for a payer.
+  \item \textbf{Model vega:} \$152.38 per 1 bp of $\sigma$.
+  \item \textbf{Exercise distribution:} 37.3\% at 2Y, 14.4\% at 3Y, 10.7\% at 4Y,
+        37.7\% never ($P(\text{ever}) = 62.3\%$).
+  \item \textbf{Exposure (time-$t$ mark-to-market):} EPE \$19.1k / \$4.0k / \$0.7k and
+        PFE(97.5\%) \$70.3k / \$28.8k / \$10.1k across the three exercise dates, the
+        expected run-off profile.
+\end{itemize}
+
+\noindent\textbf{Honest finding:} the key-rate buckets summed to \$130.98 versus a
+\$125.71 parallel DV01 ($\sim$4\% gap). The cause is named: the curve uses natural
+cubic-spline interpolation, which is non-local, so single-node bumps do not cleanly
+partition a parallel shift. A production setup would use local interpolation or a full
+Jacobian for bucketed risk.
+
+\section{Conventions and limitations}
+
+\paragraph{Convention alignment (post-LIBOR).} USD LIBOR ceased in June 2023; swaps
+reference SOFR, a risk-free overnight rate with no tenor basis, so the single-curve
+approach is more defensible now than in the LIBOR era. The Gaussian model is consistent
+with normal-vol quoting and admits negative rates. The single SOFR curve is consistent
+with SOFR-CSA collateral discounting.
+
+\paragraph{Stated limitations.}
+\begin{enumerate}[nosep]
+  \item \textbf{Single-factor smile.} A Gaussian model (1F or G2++) structurally cannot
+        produce a volatility smile/skew. Capturing it requires a different model class
+        (SABR, Cheyette-with-skew). G2++ addresses curve decorrelation, not smile.
+  \item \textbf{Implied-vol calibration is absent.} Parameters are historically estimated
+        ($\sigma$) or conventional ($a$), not calibrated to a swaption-vol surface,
+        because no free, verifiable surface exists. The production standard for Bermudans
+        is calibration to co-terminal European swaptions. This is the single largest gap
+        and is deliberately left open rather than filled with fabricated quotes.
+  \item \textbf{Market data scope.} Multi-curve OIS/projection separation, a vol cube,
+        cash- vs physical-settled conventions, collateral/CSA and funding (FVA), full
+        calendars and day-count are not modelled; swap conventions are stylised.
+  \item \textbf{Key-rate non-locality} under cubic-spline interpolation (Section 6).
+  \item \textbf{Governance.} Reproducibility (pinned seeds, dependencies, dated data
+        snapshots) and validation records (this report and \texttt{research/}) are in
+        place; observability, deterministic builds, and an independent validation
+        sign-off are not, so ``production-grade'' is not yet claimed.
+\end{enumerate}
+
+\noindent This evidence set --- independent benchmarking against QuantLib, convergence
+analysis, primal--dual policy validation, real-data parameterisation, and documented
+limitations --- is the form of evidence expected under model-risk guidance such as the
+Federal Reserve's SR 11-7.
+
+\section*{References}
+\small
+\begin{itemize}[nosep,leftmargin=1.2em]
+  \item Andersen, L., and M. Broadie. ``A Primal--Dual Simulation Algorithm for Pricing
+        Multidimensional American Options.'' \emph{Management Science}, vol.~50, no.~9,
+        2004, pp.~1222--1234.
+  \item Brigo, D., and F. Mercurio. \emph{Interest Rate Models --- Theory and Practice}.
+        2nd ed., Springer, 2006.
+  \item Hull, J., and A. White. ``Pricing Interest-Rate-Derivative Securities.''
+        \emph{The Review of Financial Studies}, vol.~3, no.~4, 1990, pp.~573--592.
+  \item Jamshidian, F. ``An Exact Bond Option Formula.'' \emph{The Journal of Finance},
+        vol.~44, no.~1, 1989, pp.~205--209.
+  \item Longstaff, F.~A., and E.~S. Schwartz. ``Valuing American Options by Simulation:
+        A Simple Least-Squares Approach.'' \emph{The Review of Financial Studies},
+        vol.~14, no.~1, 2001, pp.~113--147.
+  \item Rogers, L.~C.~G. ``Monte Carlo Valuation of American Options.''
+        \emph{Mathematical Finance}, vol.~12, no.~3, 2002, pp.~271--286.
+  \item Board of Governors of the Federal Reserve System. ``SR 11-7: Guidance on Model
+        Risk Management.'' 2011.
+  \item QuantLib (v1.42.1); Federal Reserve Economic Data (FRED), Federal Reserve Bank of
+            St.\ Louis.
+\end{itemize}
+
+\end{document}
